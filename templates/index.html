@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Home Digital Twin</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar">
+    <div class="logo">🏠</div>
+    <nav>
+      <button class="nav active" data-view="dashboard"><span>▦</span><small>Home</small></button>
+      <button class="nav" data-view="analytics"><span>📈</span><small>Analytics</small></button>
+      <button class="nav" data-view="energy"><span>⚡</span><small>Energy</small></button>
+      <button class="nav" data-view="logs"><span>🧾</span><small>Logs</small></button>
+      <button class="nav" data-view="records"><span>🗄️</span><small>Raw Data</small></button>
+    </nav>
+    <div class="live"><i></i>LIVE</div>
+  </aside>
+
+  <main>
+    <!-- ============ TOP BAR ============ -->
+    <header class="topbar">
+      <div>
+        <h1>Welcome Home</h1>
+        <p class="sub">SMART HOME DIGITAL TWIN &middot; <span id="clock">--:--</span></p>
+      </div>
+      <div class="top-right">
+        <input id="search" class="search" placeholder="🔍 Search device...">
+        <div class="pill" id="secure-pill">--</div>
+        <div class="pill" id="mode-pill">Idle</div>
+        <div class="bell">🔔<b id="bell-n">0</b></div>
+      </div>
+    </header>
+
+    <div id="alarm-banner" class="alarm-banner hidden">🚨 TEMPERATURE ALARM — room temperature limit cross ho gayi!</div>
+
+    <!-- ============ DASHBOARD ============ -->
+    <section class="view active" id="view-dashboard">
+
+      <!-- Weather tiles -->
+      <div class="tiles">
+        <div class="tile"><p class="sub">Feels Like</p><div class="val"><span id="w-feels">--</span><small>°C</small></div></div>
+        <div class="tile"><p class="sub">Wind Speed</p><div class="val"><span id="w-wind">--</span><small>km/h</small></div></div>
+        <div class="tile"><p class="sub">Visibility</p><div class="val"><span id="w-vis">--</span><small>km</small></div></div>
+        <div class="tile"><p class="sub">Precipitation</p><div class="val"><span id="w-rain">--</span><small>mm</small></div></div>
+        <div class="tile">
+          <p class="sub">Pressure</p>
+          <div class="val"><span id="w-press">--</span><small>hPa</small></div>
+          <div class="bar"><i id="press-bar"></i></div>
+        </div>
+        <div class="tile">
+          <p class="sub">Weather</p>
+          <div class="val sm"><span id="w-icon">🌤️</span> <span id="condition">--</span></div>
+          <p class="sub" style="margin-top:8px">Humidity <b id="out-hum">--</b>%</p>
+        </div>
+      </div>
+
+      <!-- Status strip -->
+      <div class="status-strip">
+        <div class="ss"><p class="sub">Air Quality</p><b id="ss-air">--</b></div>
+        <div class="ss"><p class="sub">Temperature</p><b id="ss-temp">--</b></div>
+        <div class="ss"><p class="sub">Occupants</p><b id="ss-occ">--</b></div>
+        <div class="ss"><p class="sub">Security</p><b id="ss-sec">--</b></div>
+      </div>
+
+      <div class="layout">
+        <!-- LEFT COLUMN -->
+        <div class="col">
+          <div class="hero">
+            <div>
+              <p class="sub">Living Room</p>
+              <h2>Room Overview</h2>
+            </div>
+            <div class="chips">
+              <div class="chip">🌡️ <b id="c-temp">--</b>°C</div>
+              <div class="chip">💧 <b id="c-hum">--</b>%</div>
+              <div class="chip">⚡ <b id="c-power">0</b> kW</div>
+              <div class="chip">🌫️ <b id="c-co2">--</b> ppm CO₂</div>
+              <div class="chip">🌤️ <b id="c-out">--</b>°C outside</div>
+            </div>
+          </div>
+
+          <div class="cat-tabs" id="cat-tabs">
+            <button class="cat active" data-cat="all">All Devices</button>
+            <button class="cat" data-cat="climate">Climate</button>
+            <button class="cat" data-cat="media">Lights &amp; Media</button>
+            <button class="cat" data-cat="security">Security</button>
+          </div>
+          <div class="devices" id="devices"></div>
+
+          <div class="two">
+            <div class="card">
+              <div class="card-head"><h3>Temperature &amp; Humidity</h3><span class="sub">last 30</span></div>
+              <div class="chart-box"><canvas id="chart"></canvas></div>
+            </div>
+            <div class="card">
+              <div class="card-head"><h3>Power Usage (kW)</h3><span class="sub">live</span></div>
+              <div class="chart-box"><canvas id="chart-power"></canvas></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><h3>Scenes</h3><span class="sub">ek click mein kai devices</span></div>
+            <div class="scenes">
+              <button class="scene" onclick="scene('morning')">🌅<span>Good Morning</span></button>
+              <button class="scene" onclick="scene('movie')">🎬<span>Movie Night</span></button>
+              <button class="scene" onclick="scene('bedtime')">🌙<span>Bed Time</span></button>
+              <button class="scene" onclick="scene('away')">🚪<span>Away Mode</span></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div class="col">
+          <!-- Thermostat -->
+          <div class="card">
+            <div class="card-head"><h3>Thermostat</h3>
+              <label class="auto-row">Auto
+                <label class="switch"><input type="checkbox" id="auto-sw" onclick="toggleAuto(event)"><span></span></label>
+              </label>
+            </div>
+            <div class="gauge-wrap">
+              <svg viewBox="0 0 200 200" class="gauge">
+                <circle class="track" cx="100" cy="100" r="80" transform="rotate(135 100 100)"/>
+                <circle id="arc" class="arc" cx="100" cy="100" r="80" transform="rotate(135 100 100)"/>
+                <circle id="target-dot" cx="100" cy="100" r="7" fill="#fff"/>
+              </svg>
+              <div class="gauge-center">
+                <div class="g-val"><span id="g-temp">--</span><sup>°C</sup></div>
+                <small id="g-mode">Idle</small>
+              </div>
+            </div>
+            <div class="target-row">
+              <button class="round" onclick="stepTarget(-1)">−</button>
+              <div><p class="sub">Target</p><b><span id="target-val">--</span>°C</b></div>
+              <button class="round" onclick="stepTarget(1)">+</button>
+            </div>
+          </div>
+
+          <!-- Humidity + Air quality -->
+          <div class="card">
+            <div class="card-head"><h3>Humidity &amp; Air Quality</h3></div>
+            <div class="hum-row">
+              <div class="gauge-wrap sm">
+                <svg viewBox="0 0 200 200" class="gauge">
+                  <circle class="track" cx="100" cy="100" r="80" transform="rotate(135 100 100)"/>
+                  <circle id="arc-h" class="arc" cx="100" cy="100" r="80" transform="rotate(135 100 100)"/>
+                </svg>
+                <div class="gauge-center">
+                  <div class="g-val"><span id="g-hum">--</span><sup>%</sup></div>
+                  <small>Humidity</small>
+                </div>
+              </div>
+              <div class="aq">
+                <p class="sub">Air Quality</p>
+                <h2 id="aq-label">--</h2>
+                <p class="sub">CO₂ <b id="aq-co2">--</b> ppm</p>
+                <div class="bar"><i id="co2-bar"></i></div>
+                <p class="sub" style="margin-top:8px">PM2.5 <b id="aq-pm">--</b> µg/m³</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Alarm -->
+          <div class="card">
+            <div class="card-head"><h3>Temperature Alarm</h3><span class="badge" id="alarm-badge">OK</span></div>
+            <div class="target-row">
+              <button class="round" onclick="stepAlarm(-1)">−</button>
+              <div><p class="sub">Alarm above</p><b><span id="alarm-val">--</span>°C</b></div>
+              <button class="round" onclick="stepAlarm(1)">+</button>
+            </div>
+          </div>
+
+          <!-- Weather forecast -->
+          <div class="card">
+            <div class="card-head"><h3>Weather Forecast</h3><span class="sub">☀️ <span id="sunrise">--</span> · 🌇 <span id="sunset">--</span></span></div>
+            <ul class="forecast" id="forecast"></ul>
+          </div>
+
+          <!-- Members -->
+          <div class="card">
+            <div class="card-head"><h3>Members</h3><span class="sub">click = Home / Away</span></div>
+            <div class="members" id="members"></div>
+          </div>
+
+          <!-- Automation rules -->
+          <div class="card">
+            <h3>Automation Rules</h3>
+            <div class="rule">
+              <div class="rule-flow"><span class="rb when">WHEN</span> Window OPEN <span>→</span> <span class="rb then">THEN</span> Heater OFF</div>
+              <div class="rule-status" id="rule1">Waiting</div>
+            </div>
+            <div class="rule">
+              <div class="rule-flow"><span class="rb when">WHEN</span> Auto ON &amp; temp ≠ target <span>→</span> <span class="rb then">THEN</span> AC / Heater</div>
+              <div class="rule-status" id="rule2">Disabled</div>
+            </div>
+            <div class="rule">
+              <div class="rule-flow"><span class="rb when">WHEN</span> Temp &gt; alarm limit <span>→</span> <span class="rb then">THEN</span> Alarm</div>
+              <div class="rule-status" id="rule3">Waiting</div>
+            </div>
+          </div>
+
+          <!-- Delayed command demo -->
+          <div class="card">
+            <h3>Delayed Command Demo</h3>
+            <p class="sub mb">Version numbers se purani/late commands ignore hoti hain.</p>
+            <button class="btn warn" onclick="sendStale()">1. Send Stale AC Command</button>
+            <button class="btn warn" style="margin-top:8px" onclick="outOfOrder()">2. Out-of-Order Demo (Light)</button>
+          </div>
+
+          <!-- Notifications -->
+          <div class="card">
+            <h3>Notifications</h3>
+            <ul class="list" id="notifs"></ul>
+          </div>
+
+          <div class="card">
+            <h3>Recent Activity</h3>
+            <ul class="list" id="logs"></ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ ANALYTICS ============ -->
+    <section class="view" id="view-analytics">
+      <div class="stats">
+        <div class="card stat"><p class="sub">Min Temp</p><h2 id="s-min">--</h2></div>
+        <div class="card stat"><p class="sub">Avg Temp</p><h2 id="s-avg">--</h2></div>
+        <div class="card stat"><p class="sub">Max Temp</p><h2 id="s-max">--</h2></div>
+        <div class="card stat"><p class="sub">Avg Humidity</p><h2 id="s-hum">--</h2></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>Temperature Trend</h3><span class="sub">last 100 readings</span></div>
+        <div class="chart-box tall"><canvas id="chart2"></canvas></div>
+      </div>
+      <div class="card" style="margin-top:20px">
+        <div class="card-head"><h3>Humidity Trend</h3><span class="sub">last 100 readings</span></div>
+        <div class="chart-box tall"><canvas id="chart3"></canvas></div>
+      </div>
+    </section>
+
+    <!-- ============ ENERGY ============ -->
+    <section class="view" id="view-energy">
+      <div class="stats">
+        <div class="card stat"><p class="sub">Current Load</p><h2><span id="e-kw">--</span> kW</h2></div>
+        <div class="card stat"><p class="sub">Total Energy</p><h2><span id="e-kwh">--</span> kWh</h2></div>
+        <div class="card stat"><p class="sub">Estimated Cost</p><h2>₹ <span id="e-cost">--</span></h2></div>
+        <div class="card stat"><p class="sub">Active Devices</p><h2 id="e-active">--</h2></div>
+      </div>
+      <div class="two">
+        <div class="card">
+          <div class="card-head"><h3>Electricity Used (kWh)</h3><span class="sub">device wise</span></div>
+          <div class="chart-box tall"><canvas id="chart-energy"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Device Power Consumption</h3><span class="sub">abhi</span></div>
+          <ul class="plist" id="power-list"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ LOGS ============ -->
+    <section class="view" id="view-logs">
+      <div class="card">
+        <div class="card-head"><h3>Activity Logs</h3><span class="sub">database se</span></div>
+        <table>
+          <thead><tr><th>Time</th><th>Activity</th><th>Status</th></tr></thead>
+          <tbody id="logs-table"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ RAW DATA ============ -->
+    <section class="view" id="view-records">
+      <div class="card">
+        <div class="card-head"><h3>Raw Data (SQLite)</h3><span class="sub" id="pg-info">--</span></div>
+        <table>
+          <thead><tr><th>ID</th><th>Temperature</th><th>Humidity</th><th>Date &amp; Time</th></tr></thead>
+          <tbody id="rec-room"></tbody>
+        </table>
+        <div class="pager">
+          <button class="btn" id="pg-prev" onclick="changePage(-1)">← Prev</button>
+          <button class="btn" id="pg-next" onclick="changePage(1)">Next →</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="toast"></div>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
